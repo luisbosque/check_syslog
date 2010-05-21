@@ -1,0 +1,57 @@
+use Getopt::Long;
+use Sys::Syslog qw( :DEFAULT setlogsock);
+use Sys::Hostname;
+use IO::Socket;
+use threads;
+use Digest::MD5 qw(md5 md5_base64 md5_hex);
+
+
+$timeout = 10;
+$syslog_server = "127.0.0.1";
+$local_port = 2000;
+$syslog_facility = "local0";
+$syslog_level = "info";
+
+GetOptions("timeout=i" => \$timeout, "ip=s" => \$syslog_server, "facility=s" => \$syslog_facility, "level=s" => \$syslog_level, "local-port=i" => \$local_port);
+
+$syslog_ident = "nagios_syslog_check";
+$message = md5_hex("nagios" . hostname  . time);
+
+sub udp_socket {
+  $server = IO::Socket::INET->new(LocalPort => $local_port, Proto => "udp")
+    or die "Couldn't be a udp server on port $local_port : $@\n";
+
+  $MAX_TO_READ=1024;
+
+  while ($server->recv($datagram, $MAX_TO_READ)) {
+    return 1 if ($datagram =~ m/$message/);
+  } 
+}
+
+sub send_log {
+  setlogsock("udp", $syslog_server);
+  openlog($syslog_ident, "nofatal", $syslog_facility);
+  syslog($syslog_level, $message);
+  closelog;
+}
+
+$t = threads->new(\&udp_socket);
+sleep 1;
+send_log;
+sleep $timeout;
+
+if ($t->is_joinable()) {
+  if ($t->join()) {
+    print "Syslog in $syslog_server OK\n";
+    exit 0;
+  }
+  else {
+    print "Invalid response from Syslog in $syslog_server\n";
+    exit 1;
+  }
+}
+else {
+  $t->detach();
+  print "No response from the Syslog in $syslog_server\n";
+  exit 1;
+}
