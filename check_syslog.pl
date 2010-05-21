@@ -1,28 +1,31 @@
+#!/usr/bin/perl -w
+
 use Getopt::Long;
 use Sys::Syslog qw( :DEFAULT setlogsock);
 use Sys::Hostname;
 use IO::Socket;
 use threads;
 use Digest::MD5 qw(md5 md5_base64 md5_hex);
+use warnings;
+use strict;
 
-
-$timeout = 10;
-$syslog_server = "127.0.0.1";
-$local_port = 2000;
-$syslog_facility = "local0";
-$syslog_level = "info";
+my $timeout = 10;
+my $syslog_server = "127.0.0.1";
+my $local_port = 2000;
+my $syslog_facility = "local0";
+my $syslog_level = "info";
 
 GetOptions("timeout=i" => \$timeout, "ip=s" => \$syslog_server, "facility=s" => \$syslog_facility, "level=s" => \$syslog_level, "local-port=i" => \$local_port);
 
-$syslog_ident = "nagios_syslog_check";
-$message = md5_hex("nagios" . hostname  . time);
+my $syslog_ident = "nagios_syslog_check";
+my $message = md5_hex("nagios" . hostname  . time);
 
 sub udp_socket {
-  $server = IO::Socket::INET->new(LocalPort => $local_port, Proto => "udp")
+  my $server = IO::Socket::INET->new(LocalPort => $local_port, Proto => "udp")
     or die "Couldn't be a udp server on port $local_port : $@\n";
 
-  $MAX_TO_READ=1024;
-
+  my $MAX_TO_READ=1024;
+  my $datagram = "";
   while ($server->recv($datagram, $MAX_TO_READ)) {
     return 1 if ($datagram =~ m/$message/);
   } 
@@ -35,7 +38,7 @@ sub send_log {
   closelog;
 }
 
-$t = threads->new(\&udp_socket);
+my $t = threads->new(\&udp_socket);
 sleep 1;
 send_log;
 sleep $timeout;
