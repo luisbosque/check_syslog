@@ -12,7 +12,7 @@ use strict;
 my $timeout = 10;
 my $syslog_server = "127.0.0.1";
 my $local_port = 2000;
-my $syslog_facility = "local0";
+my $syslog_facility = "local6";
 my $syslog_level = "info";
 
 GetOptions("timeout=i" => \$timeout, "ip=s" => \$syslog_server, "facility=s" => \$syslog_facility, "level=s" => \$syslog_level, "local-port=i" => \$local_port);
