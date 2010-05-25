@@ -1,0 +1,101 @@
+Description
+===========
+check_syslog is a simple perl script used to check if a remote syslog server is 
+working the way it should be.
+
+The script when ejecuted, it sends a message to the remote Syslog server. Then it starts 
+an UDP server and wait a response from the Syslog server. Obviously, the Syslog server needs 
+to be configured before to be able to send a message back to the script.
+
+Requirements
+============
+This script is known to work with the next software versions:
+* Perl 5.8.8
+* Perl threads 1.77 (the version in the Perl 5.8.8 core doesn't work)
+* Perl Sys::Syslog 0.27
+* Perl Digest::SHA1 2.11
+
+Usage
+=====
+check_syslog [options]
+
+Options:
+  --timeout timeout_seconds      Max time in seconds to keep waiting for a response from the 
+                                 syslog server. 
+                                 Default: 10
+
+  --ip syslog_ip                 Remote Syslog server IP.
+                                 Default: 127.0.0.1
+
+  --facility syslog_facility     Facility used to send the message to the syslog server.
+                                 Default: local6
+
+  --level syslog_level           Level used to send the message to the syslog server.
+                                 Default: info
+
+  --local-port bind_port         Local port used to bind to wait for the syslog server response.
+                                 Default: 2000
+
+
+Configuration
+=============
+On the remote side you must have a Syslog UDP capable server.
+I use Syslog-NG. It needs a small configuration, so it knows how to send a response to 
+the server where the script was launched.
+There is a configuration example for the Syslog-NG server. Let's suppose that the script 
+is being executed from a server in the IP 10.0.0.2 and the port passed by parameter to the 
+script is 2000:
+
+  source lan {
+    internal();
+    udp(ip(0.0.0.0) port(514));
+  };
+
+  filter f_nagios_check {
+    host("10.0.0.2");
+  };
+
+  destination d_nagios {
+    udp("10.0.0.2" port(2000));
+  };
+
+  log {
+    source(lan);
+    filter(f_nagios_check);
+    destination(d_nagios);
+  };
+
+Nagios usage
+============
+This script can be executed directly by is mainly made to be used within Nagios.
+There is a possible Nagios configuration defining a check of the syslog in a remote server.
+
+define command{
+  command_name          check_syslog
+  command_line          /usr/local/bin/check_syslog.pl --ip $HOSTADDRESS$ --timeout $ARG1$ --local-port $ARG2$ --facility $ARG3$ --level $ARG4$
+}
+
+define hostgroup{
+   hostgroup_name       syslogservers
+   alias                Syslog Servers
+}
+
+define host{
+  host_name             logs
+  alias                 Syslog Server
+  address               10.0.0.1
+  use                   generic-host-template
+  hostgroups            syslogservers
+  register 1
+}
+
+define service{
+  use                   generic-service
+  hostgroup_name        syslogservers
+  service_description   Syslog
+  check_command         check_syslog!8!2000!local6!info
+}
+
+Comments
+========
+This README and the script itself are work in progress. For any doubts you can mail me to luisico AT gmail DOT com
