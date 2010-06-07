@@ -50,11 +50,11 @@ if ($t->is_joinable()) {
   }
   else {
     print "Invalid response from Syslog in $syslog_server\n";
-    exit 1;
+    exit 2;
   }
 }
 else {
   $t->detach();
   print "No response from the Syslog in $syslog_server\n";
-  exit 1;
+  exit 2;
 }
